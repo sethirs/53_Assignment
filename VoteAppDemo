@@ -1,0 +1,72 @@
+Observation:
+
+1. Vote POD deletion
+kubectl delete po vote-94849dc97-6v9x8
+pod "vote-94849dc97-6v9x8" deleted
+
+a. Vote POD deleted and recreated automatically
+b. Container id changed in Frontend in Voter Page.
+c. No changes in WebUI for Results page.
+
+2. Worker POD deletion
+[root@ip-172-31-25-75 k8s-specifications]# kubectl delete po worker-dd46d7584-lxqtv
+pod "worker-dd46d7584-lxqtv" deleted
+
+a. Worker POD deleted and recreated automatically
+b. No changes in WebUI for Voting page and Results page.
+
+3. DB POD deletion
+[root@ip-172-31-25-75 k8s-specifications]# kubectl delete po db-b54cd94f4-6m4gq
+pod "db-b54cd94f4-6m4gq" deleted
+
+a. Worker POD deleted and recreated automatically
+b. After sucessfull new DB Pod initialisation, Error observed in "Vote" and "Worker" Pod followed by container restarts for both simultaneously.
+c. Result page UI went in default state. Means showing 0 votes
+d. After refreshing Voter UI page, Result Page UI restored automatically with the total 1 vote.
+e. Extra Observation: If refresh the Result Page UI, initially it shows 0 vote, then in seconds it start displaying "1 vote"
+
+
+### Result and Worker logs
+[root@ip-172-31-25-75 k8s-specifications]# kubectl logs result-5d57b59f4b-4fmpf
+Wed, 25 Oct 2023 03:07:26 GMT body-parser deprecated undefined extended: provide extended option at server.js:67:17
+App running on port 80
+Connected to db
+Error performing query: error: relation "votes" does not exist
+Error performing query: error: relation "votes" does not exist
+Error performing query: error: relation "votes" does not exist
+Error performing query: error: relation "votes" does not exist
+Error performing query: error: relation "votes" does not exist
+[root@ip-172-31-25-75 k8s-specifications]#
+[root@ip-172-31-25-75 k8s-specifications]#
+[root@ip-172-31-25-75 k8s-specifications]# kubectl logs worker-dd46d7584-s8tpt
+Connected to db
+Found redis at 10.98.108.233
+Connecting to redis
+Processing vote for 'b' by '71fb3b88f30e122'
+[root@ip-172-31-25-75 k8s-specifications]#
+
+
+
+Sequence of events captured in 2nd manual deletion of DB pod.
+
+ec2-user@ip-172-31-25-75 ~]$  kubectl get po -w
+NAME                      READY   STATUS    RESTARTS   AGE
+db-b54cd94f4-4gzrb        1/1     Running   0          8m
+redis-868d64d78-fhlpr     1/1     Running   0          43m
+result-5d57b59f4b-4fmpf   1/1     Running   1          43m
+vote-94849dc97-p7hgr      1/1     Running   0          13m
+worker-dd46d7584-s8tpt    1/1     Running   1          10m
+db-b54cd94f4-4gzrb        1/1     Terminating   0          9m23s
+db-b54cd94f4-gbbzx        0/1     Pending       0          0s
+db-b54cd94f4-gbbzx        0/1     Pending       0          0s
+db-b54cd94f4-gbbzx        0/1     ContainerCreating   0          0s
+db-b54cd94f4-gbbzx        1/1     Running             0          1s
+worker-dd46d7584-s8tpt    0/1     Error               1          12m
+result-5d57b59f4b-4fmpf   0/1     Error               1          44m
+db-b54cd94f4-4gzrb        0/1     Terminating         0          9m54s
+db-b54cd94f4-4gzrb        0/1     Terminating         0          9m59s
+db-b54cd94f4-4gzrb        0/1     Terminating         0          9m59s
+result-5d57b59f4b-4fmpf   0/1     CrashLoopBackOff    1          45m
+result-5d57b59f4b-4fmpf   1/1     Running             2          45m
+worker-dd46d7584-s8tpt    0/1     CrashLoopBackOff    1          12m
+worker-dd46d7584-s8tpt    1/1     Running             2          12m
